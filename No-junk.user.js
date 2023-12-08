@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Junk Squasher
+// @name         No-junk
 // @namespace    zandermax
-// @version      0.1
-// @description  Squash junk on websites
+// @version      0.2
+// @description  Disable junk on websites
 // @author       zandermaxwell@hey.com
 // @match        *://*/*
 // @grant        none
@@ -79,8 +79,9 @@ window.noJunk = {
 			);
 			if (labels) {
 				const [, label, labelWithSpaces] = labels;
-				if (label || labelWithSpaces)
+				if (label || labelWithSpaces) {
 					summary.innerText += ` (${label || labelWithSpaces})`;
+				}
 			}
 
 			if (nonp.querySelector('iframe')) {
