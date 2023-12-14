@@ -8,6 +8,20 @@
 // @grant        none
 // ==/UserScript==
 
+const waitForIt = (selectorText, callback) => {
+	const observer = new MutationObserver(function (mutations, me) {
+		const element = document.querySelector(selectorText);
+		if (element) {
+			me.disconnect(); // stop observing
+			callback();
+		}
+	});
+	observer.observe(document, {
+		childList: true,
+		subtree: true,
+	});
+};
+
 const elementTypesToShow = 'p,a,h1,h2,h3,h4,h5,h6';
 
 const logPreText = '[JunkSquasher]';
@@ -16,7 +30,50 @@ const junkSquashLog = (str) => {
 	console.warn(`${logPreText} str`);
 };
 
+const collapse = (nonp) => {
+	const squashMap = {};
+	const details = document.createElement('details');
+	const summary = document.createElement('summary');
+
+	const tagName = nonp.tagName.toLowerCase();
+	let numSquashed;
+
+	if (tagName === 'figure') {
+		summary.innerText = 'Figure';
+	} else {
+		summary.innerText = '[Hidden content]';
+	}
+
+	// Add label if present
+	const labels = nonp.innerHTML.match(/\s(?:aria-label=(?:"([^"]+)"|(\S+)))/);
+	if (labels) {
+		const [, label, labelWithSpaces] = labels;
+		if (label || labelWithSpaces) {
+			summary.innerText += ` (${label || labelWithSpaces})`;
+		}
+	}
+
+	if (nonp.querySelector('iframe')) {
+		summary.innerText += ' - IFRAME';
+		const iframesSquashed = squashMap.iframe ?? 0;
+		squashMap.iframe = iframesSquashed + 1;
+	}
+
+	details.appendChild(summary);
+	nonp.parentElement.replaceChild(details, nonp);
+	details.appendChild(nonp);
+
+	numSquashed = squashMap[tagName] ?? 0;
+	squashMap[tagName] = numSquashed + 1;
+	console.table(squashMap);
+};
+
 window.noJunk = {
+	byeVideo() {
+		stopAutoPlaying();
+		document.querySelectorAll('.jw-media').forEach(collapse);
+	},
+
 	enableScrolling() {
 		document
 			.querySelectorAll("[overflow], [style~='overflow:']")
@@ -58,47 +115,7 @@ window.noJunk = {
 			(el) => el.offsetHeight !== 0 && el.offsetWidth !== 0
 		);
 
-		const squashMap = {};
-
-		visibleNonPs.forEach((nonp) => {
-			const details = document.createElement('details');
-			const summary = document.createElement('summary');
-
-			const tagName = nonp.tagName.toLowerCase();
-			let numSquashed;
-
-			if (tagName === 'figure') {
-				summary.innerText = 'Figure';
-			} else {
-				summary.innerText = '[Hidden content]';
-			}
-
-			// Add label if present
-			const labels = nonp.innerHTML.match(
-				/\s(?:aria-label=(?:"([^"]+)"|(\S+)))/
-			);
-			if (labels) {
-				const [, label, labelWithSpaces] = labels;
-				if (label || labelWithSpaces) {
-					summary.innerText += ` (${label || labelWithSpaces})`;
-				}
-			}
-
-			if (nonp.querySelector('iframe')) {
-				summary.innerText += ' - IFRAME';
-				const iframesSquashed = squashMap.iframe ?? 0;
-				squashMap.iframe = iframesSquashed + 1;
-			}
-
-			details.appendChild(summary);
-			nonp.parentElement.replaceChild(details, nonp);
-			details.appendChild(nonp);
-
-			numSquashed = squashMap[tagName] ?? 0;
-			squashMap[tagName] = numSquashed + 1;
-		});
-
-		console.table(squashMap);
+		visibleNonPs.forEach(collapse);
 
 		addStyles();
 	},
@@ -125,3 +142,20 @@ const addStyles = () => {
 	}`
 	);
 };
+
+const stopAutoPlaying = () => {
+	document.querySelectorAll('video').forEach((vid) => {
+		vid.autoplay = false;
+		vid.pause();
+	});
+};
+
+// Should just do this regardless... auto-play should be illegal
+waitForIt('video', stopAutoPlaying);
+
+// I have yet to find any value in something created by jwplayer. Good riddance.
+waitForIt("[class*='jwplayer']", () => {
+	document
+		.querySelectorAll("[class*='jwplayer']")
+		.forEach((jwPlayerJunk) => jwPlayerJunk.remove());
+});
