@@ -2,7 +2,7 @@
 // @name         Dev.to anti-annoyance
 // @namespace    http://tampermonkey.net/
 // @version      2024-06-13
-// @description  try to take over the world!
+// @description  Close big useless sponsorship notification on dev.to
 // @author       zandermaxwell@hey.com
 // @match        https://dev.to/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=dev.to
@@ -27,7 +27,7 @@ const waitForIt = (selectorText, callback) => {
 
 
 
-// Close big useless sponsonship notification
+// Close big useless sponsorship notification
 const goAway = () => {
     document.querySelector(query).click();
 };
