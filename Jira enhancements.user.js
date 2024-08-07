@@ -123,6 +123,9 @@ const moveSaveContainer = saveButtonContainer => {
 			property: 'borderWidth'
 		});
 		saveButtonContainer.style.border = getComputedStyle(childWithBorder).border;
+		saveButtonContainer.style.borderRadius = getComputedStyle(
+			childWithBorder
+		).borderRadius;
 		saveButtonContainer.style.marginBlockStart = '1em';
 		saveButtonContainer.style.paddingInlineStart = '1em';
 
