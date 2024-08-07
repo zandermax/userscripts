@@ -17,7 +17,10 @@ const log = (text) => {
 document.addEventListener("keydown", (event) => {
     if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "c") {
         const title = document.title || "[NO TITLE]";
-        const url = window.location.href;
+        let url = window.location.href;
+        // Replace all parentheses with URI encoded versions
+        // This is necessary because the markdown link will be pasted into a URL field
+        url = url.replace(/\(/g, "%28").replace(/\)/g, "%29");
         const md = `[${title}](${url})`;
 
         GM.setClipboard(md);
