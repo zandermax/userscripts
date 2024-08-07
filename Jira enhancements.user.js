@@ -15,8 +15,9 @@ const saveButtonContainerSelector =
 const inEditModeQuery =
 	'[data-testid="issue.views.field.rich-text.editor-container"]';
 
-let originalSaveButtonContainerStyle = null;
-
+/* -------------------------------------------------------------------------- */
+/*                                 DOM helpers                                */
+/* -------------------------------------------------------------------------- */
 const waitForIt = ({ query, onAppear, onDisappear }) => {
 	let elementPresent = false;
 
@@ -44,25 +45,43 @@ const waitForIt = ({ query, onAppear, onDisappear }) => {
 	});
 };
 
-const getLastChildWithHeight = parent => {
-	const children = parent.children;
-	for (let i = children.length - 1; i >= 0; i--) {
-		if (children[i].offsetHeight > 0) {
-			return children[i];
-		}
+const getVisibleSibling = ({ element, reverse = false }) => {
+	let next = element.nextElementSibling;
+	while (next && next.offsetHeight === 0) {
+		next = reverse ? next.previousElementSibling : next.nextElementSibling;
 	}
-	return null;
+	return next;
 };
 
-const getChildWithZIndex = parent => {
-	const children = parent.children;
-	for (let i = 0; i < children.length; i++) {
-		const child = children[i];
-		const zIndex = window.getComputedStyle(child).zIndex;
-		if (zIndex !== 'auto') {
+const getVisibleChild = ({ parent, reverse = false }) => {
+	let next = reverse ? parent.lastChild : parent.firstChild;
+	while (next && next.offsetHeight === 0) {
+		next = reverse ? next.previousElementSibling : next.nextElementSibling;
+	}
+	return next;
+};
+
+const getChildWithProperty = ({ parent, property, reverse = false }) => {
+	// Create a temporary element to get the default value of the property
+	const tempElement = document.createElement('div');
+	document.body.appendChild(tempElement);
+	const defaultValue = window.getComputedStyle(tempElement)[property];
+	document.body.removeChild(tempElement);
+
+	const children = Array.from(parent.children);
+	const length = children.length;
+	for (let i = 0; i < length; i++) {
+		const index = reverse ? length - 1 - i : i;
+		const child = children[index];
+		const propertyValue = window.getComputedStyle(child)[property];
+		if (propertyValue !== defaultValue) {
 			return child;
 		}
-		const foundChild = getChildWithZIndex(child);
+		const foundChild = getChildWithProperty({
+			parent: child,
+			property,
+			reverse
+		});
 		if (foundChild) {
 			return foundChild;
 		}
@@ -70,28 +89,39 @@ const getChildWithZIndex = parent => {
 	return null;
 };
 
-const getFirstChildWithBorder = parent => {
-	const children = parent.children;
-	for (let i = 0; i < children.length; i++) {
-		const child = children[i];
-		const borderWidth = window.getComputedStyle(child).borderWidth;
-		if (borderWidth !== '0px') {
-			return child;
-		}
-		const foundChild = getFirstChildWithBorder(child);
-		if (foundChild) {
-			return foundChild;
-		}
+const getElementWithTransitionProperty = ({ element, property }) => {
+	if (!element) {
+		return null;
 	}
-	return null;
+	const computedStyle = window.getComputedStyle(element);
+	if (computedStyle.transitionProperty.includes(property)) {
+		return element;
+	}
+	return getElementWithTransitionProperty({
+		element: element.parentElement,
+		property
+	});
 };
+
+/* -------------------------------------------------------------------------- */
+/*                               Main functions                               */
+/* -------------------------------------------------------------------------- */
 
 const moveSaveContainer = saveButtonContainer => {
 	const ticketViewContainer = document.querySelector(mainTicketViewSelector);
-	const lastChild = getLastChildWithHeight(ticketViewContainer);
-	const bottomContainer = getChildWithZIndex(lastChild);
+	const lastChild = getVisibleChild({
+		parent: ticketViewContainer,
+		reverse: true
+	}); // getLastChildWithHeight(ticketViewContainer);
+	const bottomContainer = getChildWithProperty({
+		parent: lastChild,
+		property: 'zIndex'
+	});
 	if (bottomContainer && saveButtonContainer) {
-		const childWithBorder = getFirstChildWithBorder(bottomContainer);
+		const childWithBorder = getChildWithProperty({
+			parent: bottomContainer,
+			property: 'borderWidth'
+		});
 		saveButtonContainer.style.border = getComputedStyle(childWithBorder).border;
 		saveButtonContainer.style.marginBlockStart = '1em';
 		saveButtonContainer.style.paddingInlineStart = '1em';
@@ -114,16 +144,16 @@ const moveSaveContainer = saveButtonContainer => {
 // TODO: Add a button to collapse the right side panel
 const addCollapseToRightSide = () => {
 	// collapse button from the left side
-	const collapseButton = document.querySelector('[role="slider"]')
-		.nextElementSibling;
+	const collapseButton = getVisibleSibling({
+		element: document.querySelector('[role="slider"]')
+	});
 
 	// vertical re-sizers // right side is not a button...
 	const reSizer = document.querySelector(
 		'[aria-orientation="vertical"][role="separator"]:not(button'
 	);
 	// right side panel
-	const rightSide = reSizer.nextElementSibling;
-	4;
+	const rightSide = getVisibleSibling({ element: reSizer.nextElementSibling });
 
 	// Animation is on this element
 	const leftSide = document.querySelector(
@@ -132,18 +162,6 @@ const addCollapseToRightSide = () => {
 
 	// Duplicate the collapse button and add it to the right side
 	reSizer.prepend(collapseButton.cloneNode(true));
-
-	// Function to find an element with `transition: width` set
-	const findElementWithTransition = element => {
-		if (!element) {
-			return null;
-		}
-		const computedStyle = window.getComputedStyle(element);
-		if (computedStyle.transitionProperty.includes('width')) {
-			return element;
-		}
-		return findElementWithTransition(element.parentElement);
-	};
 };
 
 waitForIt({ query: saveButtonContainerSelector, onAppear: moveSaveContainer });
