@@ -93,18 +93,57 @@ const moveSaveContainer = saveButtonContainer => {
 	if (bottomContainer && saveButtonContainer) {
 		const childWithBorder = getFirstChildWithBorder(bottomContainer);
 		saveButtonContainer.style.border = getComputedStyle(childWithBorder).border;
+		saveButtonContainer.style.marginBlockStart = '1em';
 		saveButtonContainer.style.paddingInlineStart = '1em';
-		bottomContainer.insertBefore(
-			saveButtonContainer,
-			bottomContainer.firstChild
-		);
+
+		// Get rid of the box shadow on the first child, restore it after
+		const firstChild = bottomContainer.firstChild;
+		const boxShadow = getComputedStyle(firstChild).boxShadow;
+		firstChild.style.boxShadow = 'none';
+		bottomContainer.insertBefore(saveButtonContainer, firstChild);
 		waitForIt({
 			query: inEditModeQuery,
 			onDisappear: () => {
 				saveButtonContainer.remove();
+				firstChild.style.boxShadow = boxShadow;
 			}
 		});
 	}
+};
+
+// TODO: Add a button to collapse the right side panel
+const addCollapseToRightSide = () => {
+	// collapse button from the left side
+	const collapseButton = document.querySelector('[role="slider"]')
+		.nextElementSibling;
+
+	// vertical re-sizers // right side is not a button...
+	const reSizer = document.querySelector(
+		'[aria-orientation="vertical"][role="separator"]:not(button'
+	);
+	// right side panel
+	const rightSide = reSizer.nextElementSibling;
+	4;
+
+	// Animation is on this element
+	const leftSide = document.querySelector(
+		'[data-testid="ContextualNavigation"]'
+	);
+
+	// Duplicate the collapse button and add it to the right side
+	reSizer.prepend(collapseButton.cloneNode(true));
+
+	// Function to find an element with `transition: width` set
+	const findElementWithTransition = element => {
+		if (!element) {
+			return null;
+		}
+		const computedStyle = window.getComputedStyle(element);
+		if (computedStyle.transitionProperty.includes('width')) {
+			return element;
+		}
+		return findElementWithTransition(element.parentElement);
+	};
 };
 
 waitForIt({ query: saveButtonContainerSelector, onAppear: moveSaveContainer });
