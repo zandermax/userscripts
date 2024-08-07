@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      2024-08-07
 // @description  Jira enhancements
-// @author       You
+// @author       Zander Maxwell (zandermax)
 // @match        https://*.atlassian.net/browse/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=atlassian.net
 // @grant        none
